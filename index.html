@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>中日語音翻譯器</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: sans-serif; padding: 20px; text-align: center; }
+    button { font-size: 18px; padding: 10px 20px; margin: 10px; }
+    #result { font-size: 24px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>🎙️ 中日語音翻譯器</h1>
+  <button onclick="startRecognition()">開始語音翻譯</button>
+  <p id="status">點擊上方按鈕開始說話</p>
+  <div id="result"></div>
+
+  <script>
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'zh-TW'; // 預設語言中文，可自動調整
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    async function translate(text) {
+      const targetLang = /[\\u4e00-\\u9fa5]/.test(text) ? 'ja' : 'zh';
+      const response = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`);
+      const data = await response.json();
+      const translated = data[0][0][0];
+      document.getElementById('result').textContent = translated;
+      speak(translated, targetLang);
+    }
+
+    function speak(text, lang) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang === 'ja' ? 'ja-JP' : 'zh-TW';
+      speechSynthesis.speak(utterance);
+    }
+
+    function startRecognition() {
+      document.getElementById('status').textContent = '聆聽中...';
+      recognition.start();
+
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('status').textContent = `你說了：「${transcript}」`;
+        translate(transcript);
+      };
+
+      recognition.onerror = function(event) {
+        document.getElementById('status').textContent = '辨識失敗，請再試一次';
+      };
+    }
+  </script>
+</body>
+</html>
